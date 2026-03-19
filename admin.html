@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - Golden Blank</title>
+    <link rel="manifest" href="./manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --text-color: #333;
+            --primary: #D4AF37;
+            --primary-hover: #b8962d;
+            --danger: #dc3545;
+            --white: #ffffff;
+            --border: #ddd;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
+
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--white);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        h1 { text-align: center; margin-bottom: 30px; color: var(--text-color); }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary { background: var(--primary); color: var(--white); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: var(--white); padding: 6px 12px; font-size: 0.9rem; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: right; border-bottom: 1px solid var(--border); }
+        th { background: #f8f9fa; font-weight: 700; }
+        .item-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--white); padding: 30px; border-radius: 12px;
+            width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #888; }
+
+        .image-preview {
+            width: 100%; height: 200px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            margin-bottom: 15px; cursor: pointer; overflow: hidden; position: relative;
+        }
+        .image-preview img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .image-preview span { color: #888; pointer-events: none; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 1rem; z-index: 9999;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>لوحة تحكم المنيو — Golden Blank</h1>
+
+    <div class="header-actions">
+        <button class="btn btn-primary" onclick="openModal()">+ إضافة منتج جديد</button>
+        <a href="./index.html" class="btn" style="background:#333;color:#fff;text-decoration:none;" target="_blank">مشاهدة المنيو 📱</a>
+    </div>
+
+    <table id="itemsTable">
+        <thead>
+            <tr>
+                <th>الصورة</th>
+                <th>القسم</th>
+                <th>اسم المنتج</th>
+                <th>السعر</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- نافذة الإضافة/التعديل -->
+<div class="modal" id="addModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">إضافة منتج</h2>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+
+        <div class="form-group">
+            <label>صورة المنتج</label>
+            <div class="image-preview" onclick="document.getElementById('imageInput').click()">
+                <span id="uploadHint">اضغط لاختيار صورة</span>
+                <img id="previewImg" src="" alt="preview">
+            </div>
+            <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImage(event)">
+        </div>
+
+        <div class="form-group">
+            <label>القسم</label>
+            <select id="itemCategory" class="form-control">
+                <option value="hot-drinks">المشروبات الساخنة</option>
+                <option value="cold-drinks">المشروبات الباردة</option>
+                <option value="sweets">الحلويات</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>اسم المنتج</label>
+            <input type="text" id="itemName" class="form-control" placeholder="مثال: ماتشا">
+        </div>
+
+        <div class="form-group">
+            <label>السعر (مع العملة)</label>
+            <input type="text" id="itemPrice" class="form-control" placeholder="مثال: 28 SAR">
+        </div>
+
+        <button onclick="saveItem()" class="btn btn-primary" style="width:100%;margin-top:10px;">حفظ المنتج</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // ===== IndexedDB =====
+    const DB_NAME = 'GoldenBlankDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'menuItems';
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                }
+            };
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => reject(e.target.error);
+        });
+    }
+
+    function getAllItems(db) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const req = tx.objectStore(STORE_NAME).getAll();
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => reject(e.target.error);
+        });
+    }
+
+    function putItem(db, item) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).put(item);
+            tx.oncomplete = resolve;
+            tx.onerror = e => reject(e.target.error);
+        });
+    }
+
+    function deleteItemDB(db, id) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).delete(id);
+            tx.oncomplete = resolve;
+            tx.onerror = e => reject(e.target.error);
+        });
+    }
+
+    function putAllItems(db, items) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            items.forEach(item => store.put(item));
+            tx.oncomplete = resolve;
+            tx.onerror = e => reject(e.target.error);
+        });
+    }
+
+    // ===== البيانات الافتراضية =====
+    const defaultItems = [
+        { id: 101, category: 'hot-drinks', name: 'V60', price: '12 SAR', image: '' },
+        { id: 102, category: 'hot-drinks', name: 'V60 محصول فاخر', price: '15 SAR', image: '' },
+        { id: 103, category: 'hot-drinks', name: 'اسبريسو', price: '10 SAR', image: '' },
+        { id: 104, category: 'hot-drinks', name: 'قهوة اليوم', price: '7 SAR', image: '' },
+        { id: 105, category: 'hot-drinks', name: 'أمريكانو', price: '11 SAR', image: '' },
+        { id: 106, category: 'hot-drinks', name: 'سبانيش لاتيه', price: '16 SAR', image: '' },
+        { id: 107, category: 'hot-drinks', name: 'فلات وايت', price: '14 SAR', image: '' },
+        { id: 108, category: 'hot-drinks', name: 'كورتادو', price: '13 SAR', image: '' },
+        { id: 109, category: 'hot-drinks', name: 'كابتشينو', price: '14 SAR', image: '' },
+        { id: 110, category: 'hot-drinks', name: 'قهوة تركية', price: '10 SAR', image: '' },
+        { id: 111, category: 'hot-drinks', name: 'قهوة سعوديه كوب', price: '8 SAR', image: '' },
+        { id: 112, category: 'hot-drinks', name: 'قهوة سعودية دله', price: '25 SAR', image: '' },
+        { id: 201, category: 'cold-drinks', name: 'V60', price: '14 SAR', image: '' },
+        { id: 202, category: 'cold-drinks', name: 'V60 محصول فاخر', price: '16 SAR', image: '' },
+        { id: 203, category: 'cold-drinks', name: 'قهوة اليوم', price: '8 SAR', image: '' },
+        { id: 204, category: 'cold-drinks', name: 'أمريكانو', price: '12 SAR', image: '' },
+        { id: 205, category: 'cold-drinks', name: 'ايس سبانيش لاتيه', price: '16 SAR', image: '' },
+        { id: 206, category: 'cold-drinks', name: 'ايس لاتيه', price: '15 SAR', image: '' },
+        { id: 207, category: 'cold-drinks', name: 'الفريدو', price: '13 SAR', image: '' },
+        { id: 208, category: 'cold-drinks', name: 'موهيتو', price: '16 SAR', image: '' },
+        { id: 209, category: 'cold-drinks', name: 'كركديه', price: '14 SAR', image: '' },
+        { id: 210, category: 'cold-drinks', name: 'ماتشا', price: '15 SAR', image: '' },
+        { id: 301, category: 'sweets', name: 'كيك عسل', price: '22 SAR', image: '' },
+        { id: 302, category: 'sweets', name: 'كيك تمر', price: '19 SAR', image: '' },
+        { id: 303, category: 'sweets', name: 'حلا البيكان', price: '18 SAR', image: '' },
+        { id: 304, category: 'sweets', name: 'تشيز مدريد', price: '22 SAR', image: '' },
+        { id: 305, category: 'sweets', name: 'لافا شوكلت', price: '18 SAR', image: '' },
+        { id: 306, category: 'sweets', name: 'لافا بستاشيو', price: '18 SAR', image: '' },
+        { id: 307, category: 'sweets', name: 'بودينق شوكلت', price: '16 SAR', image: '' },
+        { id: 401, category: 'sweets', name: 'ماء', price: '1 SAR', image: '' },
+        { id: 402, category: 'sweets', name: 'اضافة شت اسبريسو', price: '10 SAR', image: '' }
+    ];
+
+    const categoryNames = {
+        'hot-drinks': 'مشروبات ساخنة',
+        'cold-drinks': 'مشروبات باردة',
+        'sweets': 'حلويات'
+    };
+
+    let db;
+    let menuItems = [];
+    let editingId = null;
+    let currentImageBase64 = '';
+
+    // ===== عرض الجدول =====
+    function renderTable() {
+        const tbody = document.querySelector('#itemsTable tbody');
+        tbody.innerHTML = '';
+        menuItems.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    ${item.image
+                        ? `<img src="${item.image}" class="item-img">`
+                        : `<div class="item-img" style="display:flex;justify-content:center;align-items:center;background:#eee;color:#888;font-size:12px;">بدون</div>`}
+                </td>
+                <td>${categoryNames[item.category] || item.category}</td>
+                <td>${item.name}</td>
+                <td>${item.price}</td>
+                <td>
+                    <button class="btn btn-primary" style="padding:6px 12px;font-size:0.9rem;margin-left:5px;" onclick="editItem(${item.id})">تعديل</button>
+                    <button class="btn btn-danger" onclick="deleteItem(${item.id})">حذف</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ===== إضافة / تعديل =====
+    function openModal() {
+        editingId = null;
+        currentImageBase64 = '';
+        document.getElementById('modalTitle').innerText = 'إضافة منتج';
+        document.getElementById('itemCategory').value = 'hot-drinks';
+        document.getElementById('itemName').value = '';
+        document.getElementById('itemPrice').value = '';
+        document.getElementById('previewImg').style.display = 'none';
+        document.getElementById('previewImg').src = '';
+        document.getElementById('uploadHint').style.display = 'block';
+        document.getElementById('imageInput').value = '';
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    function editItem(id) {
+        const item = menuItems.find(i => i.id === id);
+        if (!item) return;
+        editingId = id;
+        currentImageBase64 = item.image || '';
+        document.getElementById('modalTitle').innerText = 'تعديل منتج';
+        document.getElementById('itemCategory').value = item.category;
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemPrice').value = item.price;
+        if (item.image) {
+            document.getElementById('previewImg').src = item.image;
+            document.getElementById('previewImg').style.display = 'block';
+            document.getElementById('uploadHint').style.display = 'none';
+        } else {
+            document.getElementById('previewImg').style.display = 'none';
+            document.getElementById('uploadHint').style.display = 'block';
+        }
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('addModal').classList.remove('active');
+    }
+
+    async function saveItem() {
+        const name = document.getElementById('itemName').value.trim();
+        const price = document.getElementById('itemPrice').value.trim();
+        const category = document.getElementById('itemCategory').value;
+
+        if (!name || !price) { showToast('يرجى ملء جميع الحقول'); return; }
+
+        const itemData = {
+            id: editingId !== null ? editingId : Date.now(),
+            category,
+            name,
+            price,
+            image: currentImageBase64
+        };
+
+        await putItem(db, itemData);
+        if (editingId !== null) {
+            menuItems = menuItems.map(i => i.id === editingId ? itemData : i);
+        } else {
+            menuItems.push(itemData);
+        }
+
+        renderTable();
+        closeModal();
+        showToast('✅ تم الحفظ بنجاح');
+    }
+
+    async function deleteItem(id) {
+        if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+        await deleteItemDB(db, id);
+        menuItems = menuItems.filter(i => i.id !== id);
+        renderTable();
+        showToast('🗑️ تم الحذف');
+    }
+
+    // ===== معالجة الصورة =====
+    function handleImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(e) {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                let width = img.width, height = img.height;
+                if (width > MAX_WIDTH) {
+                    height = Math.round((height * MAX_WIDTH) / width);
+                    width = MAX_WIDTH;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                currentImageBase64 = canvas.toDataURL('image/webp', 0.75);
+                document.getElementById('previewImg').src = currentImageBase64;
+                document.getElementById('previewImg').style.display = 'block';
+                document.getElementById('uploadHint').style.display = 'none';
+            };
+        };
+    }
+
+    // ===== إشعار =====
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ===== إغلاق النافذة عند الضغط خارجها =====
+    window.onclick = e => {
+        if (e.target === document.getElementById('addModal')) closeModal();
+    };
+
+    // ===== تشغيل =====
+    (async () => {
+        db = await openDB();
+        menuItems = await getAllItems(db);
+        if (!menuItems || menuItems.length < 20) {
+            await putAllItems(db, defaultItems);
+            menuItems = defaultItems;
+        }
+        renderTable();
+    })();
+</script>
+</body>
+</html>

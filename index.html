@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Golden Blank - القائمة الحصرية</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#F5EDD9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #B8922A;
+            --gold-light: #D4AF37;
+            --cream: #F5EDD9;
+            --beige: #EDE0C4;
+            --beige-dark: #D9C9A8;
+            --warm-white: #FAF6EE;
+            --stone: #8C7B5E;
+            --stone-light: #B5A48A;
+            --text-dark: #3A2E1E;
+            --text-mid: #6B5A3E;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ===== إجبار الوضع الأفقي دائماً ===== */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background-color: var(--cream);
+            color: var(--text-dark);
+            font-family: 'Tajawal', sans-serif;
+            touch-action: pan-x;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* شاشة تحذير الوضع العمودي */
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: var(--cream);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+            padding: 30px;
+        }
+
+        #rotate-warning svg {
+            width: 80px; height: 80px;
+            stroke: var(--gold); fill: none; stroke-width: 1.5;
+            animation: rotateIcon 2s infinite ease-in-out;
+        }
+
+        @keyframes rotateIcon {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+
+        #rotate-warning p {
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1.4rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* يظهر التحذير في الوضع العمودي فقط */
+        @media (orientation: portrait) {
+            #rotate-warning { display: flex; }
+            #app-container { display: none; }
+        }
+
+        @media (orientation: landscape) {
+            #rotate-warning { display: none; }
+            #app-container { display: block; }
+        }
+
+        /* ===== شاشة رمز المرور ===== */
+        #pin-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(58, 46, 30, 0.92);
+            backdrop-filter: blur(10px);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #pin-overlay.active { display: flex; }
+
+        #pin-box {
+            background: var(--warm-white);
+            border-radius: 20px;
+            padding: 40px 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            border: 1px solid rgba(184,146,42,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            min-width: 320px;
+        }
+
+        #pin-box h2 {
+            font-family: 'Amiri', serif;
+            font-size: 1.6rem;
+            color: var(--text-dark);
+        }
+
+        #pin-input {
+            width: 100%;
+            padding: 14px 20px;
+            border: 2px solid var(--beige-dark);
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-family: 'Tajawal', sans-serif;
+            text-align: center;
+            background: var(--cream);
+            color: var(--text-dark);
+            outline: none;
+            letter-spacing: 4px;
+            transition: border-color 0.3s;
+        }
+
+        #pin-input:focus { border-color: var(--gold); }
+        #pin-input.error { border-color: #dc3545; animation: shake 0.4s; }
+
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        #pin-error {
+            color: #dc3545;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .pin-btns { display: flex; gap: 12px; width: 100%; }
+
+        .pin-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pin-btn-cancel {
+            background: var(--beige);
+            color: var(--stone);
+        }
+
+        .pin-btn-confirm {
+            background: var(--gold);
+            color: white;
+        }
+
+        .pin-btn:active { transform: scale(0.97); }
+
+        /* ===== التطبيق الرئيسي ===== */
+        #app-container { width: 100%; height: 100%; }
+
+        .category-nav {
+            position: fixed;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            background: rgba(245, 237, 217, 0.88);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 8px 12px;
+            border-radius: 50px;
+            border: 1px solid rgba(184, 146, 42, 0.4);
+            box-shadow: 0 8px 30px rgba(58, 46, 30, 0.15);
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--stone);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover { color: var(--text-dark); }
+
+        .nav-btn.active {
+            background: rgba(184, 146, 42, 0.15);
+            color: var(--gold);
+            border: 1px solid rgba(184, 146, 42, 0.4);
+        }
+
+        /* زر الإعدادات (مخفي - يظهر بلمس طويل) */
+        .settings-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(245, 237, 217, 0.5);
+            border: 1px solid rgba(184,146,42,0.2);
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .settings-btn svg { width: 18px; height: 18px; stroke: var(--stone); fill: none; stroke-width: 2; }
+
+        .magazine {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .magazine::-webkit-scrollbar { display: none; }
+        .magazine { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .page {
+            flex: 0 0 100vw;
+            height: 100vh;
+            scroll-snap-align: center;
+            position: relative;
+            display: flex;
+            padding: 3vh 3vw;
+            background: var(--cream);
+        }
+
+        .cover-page .page-content {
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, var(--warm-white) 0%, var(--beige) 100%);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border: 1px solid rgba(184, 146, 42, 0.3);
+            box-shadow: inset 0 0 60px rgba(184,146,42,0.05);
+        }
+
+        .cover-page .page-content::after {
+            content: '';
+            position: absolute;
+            inset: 15px;
+            border: 1px solid rgba(184, 146, 42, 0.4);
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        .brand-name {
+            font-family: 'Amiri', serif;
+            font-size: clamp(3rem, 7vw, 6rem);
+            color: var(--gold);
+            margin-bottom: 20px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 4px 20px rgba(184, 146, 42, 0.25);
+            text-align: center;
+        }
+
+        .swipe-hint {
+            position: absolute;
+            bottom: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            color: var(--gold);
+            opacity: 0.7;
+            font-size: 1.1rem;
+            animation: swipeAnim 2s infinite ease-in-out;
+        }
+
+        .swipe-hint svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+        @keyframes swipeAnim {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-15px); }
+        }
+
+        .section-divider .page-content {
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--beige) 0%, var(--warm-white) 50%, var(--beige-dark) 100%);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border: 1px solid rgba(184, 146, 42, 0.25);
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(58,46,30,0.1);
+        }
+
+        .section-divider .page-content::before {
+            content: '';
+            position: absolute;
+            width: 150vw; height: 150vw;
+            background: radial-gradient(circle, rgba(184, 146, 42, 0.08) 0%, transparent 55%);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .section-title {
+            font-family: 'Amiri', serif;
+            font-size: clamp(3rem, 6vw, 5rem);
+            color: var(--gold);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-desc {
+            font-size: clamp(1.2rem, 2vw, 1.8rem);
+            color: var(--stone);
+            position: relative;
+            z-index: 2;
+        }
+
+        .item-layout {
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: row;
+            background: var(--warm-white);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(58,46,30,0.15);
+            border: 1px solid rgba(184, 146, 42, 0.2);
+        }
+
+        .item-image {
+            flex: 1;
+            background-color: var(--beige);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-placeholder {
+            font-family: 'Amiri', serif;
+            font-size: 1.5rem;
+            color: var(--stone-light);
+            border: 1px dashed var(--beige-dark);
+            padding: 40px 60px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .item-info {
+            flex: 1;
+            background: linear-gradient(180deg, var(--warm-white) 0%, var(--beige) 100%);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border-right: 1px solid rgba(184,146,42,0.15);
+        }
+
+        .item-name {
+            font-family: 'Amiri', serif;
+            font-size: clamp(2.2rem, 4vw, 3.5rem);
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .item-price {
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            font-weight: 700;
+            color: var(--gold);
+            font-family: 'Tajawal', sans-serif;
+            background: rgba(184, 146, 42, 0.08);
+            padding: 10px 40px;
+            border-radius: 50px;
+            border: 1px solid rgba(184, 146, 42, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .category-nav { width: 90%; justify-content: space-between; padding: 8px; }
+            .nav-btn { padding: 6px 10px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- تحذير الوضع العمودي -->
+    <div id="rotate-warning">
+        <svg viewBox="0 0 24 24">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <path d="M12 18h.01"/>
+        </svg>
+        <p>يرجى تدوير الجهاز<br>للوضع الأفقي</p>
+    </div>
+
+    <!-- شاشة رمز المرور -->
+    <div id="pin-overlay">
+        <div id="pin-box">
+            <h2>🔐 رمز المرور</h2>
+            <input type="password" id="pin-input" placeholder="أدخل الرمز السري" autocomplete="off" autocorrect="off" spellcheck="false">
+            <p id="pin-error">❌ رمز خاطئ، حاول مرة أخرى</p>
+            <div class="pin-btns">
+                <button class="pin-btn pin-btn-cancel" onclick="cancelPin()">إلغاء</button>
+                <button class="pin-btn pin-btn-confirm" onclick="checkPin()">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- التطبيق الرئيسي -->
+    <div id="app-container">
+
+        <nav class="category-nav">
+            <button onclick="scrollToSection('cover')" class="nav-btn active" data-target="cover" style="display:none;">الغلاف</button>
+            <button onclick="scrollToSection('hot-drinks')" class="nav-btn" data-target="hot-drinks">ساخنة</button>
+            <button onclick="scrollToSection('cold-drinks')" class="nav-btn" data-target="cold-drinks">باردة</button>
+            <button onclick="scrollToSection('sweets')" class="nav-btn" data-target="sweets">حلويات</button>
+        </nav>
+
+        <!-- زر الإعدادات المخفي - يظهر بلمس طويل في الزاوية -->
+        <button class="settings-btn" id="settingsBtn" onclick="showPinForExit()">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </button>
+
+        <div class="magazine" id="magazineContainer">
+            <section class="page cover-page section-anchor" id="cover">
+                <div class="page-content">
+                    <h1 class="brand-name">Golden Blank</h1>
+                    <div class="swipe-hint">
+                        <span>اسحب للتصفح</span>
+                        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </div><!-- end app-container -->
+
+    <script>
+        // ===== تسجيل Service Worker =====
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+
+        // ===== الرمز السري =====
+        const SECRET_PIN = 'Aa12345678';
+        let pinPurpose = 'exit'; // exit أو enter
+
+        function showPinForExit() {
+            pinPurpose = 'exit';
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-error').style.display = 'none';
+            document.getElementById('pin-input').classList.remove('error');
+            document.getElementById('pin-overlay').classList.add('active');
+            setTimeout(() => document.getElementById('pin-input').focus(), 100);
+        }
+
+        function cancelPin() {
+            document.getElementById('pin-overlay').classList.remove('active');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-error').style.display = 'none';
+        }
+
+        function checkPin() {
+            const val = document.getElementById('pin-input').value;
+            if (val === SECRET_PIN) {
+                document.getElementById('pin-overlay').classList.remove('active');
+                if (pinPurpose === 'exit') {
+                    // السماح بالخروج — نخرج من fullscreen فقط ونتركه يتصرف
+                    if (document.exitFullscreen) document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                    // نفتح الأدمن في تاب جديد
+                    window.open('./admin.html', '_blank');
+                }
+            } else {
+                const input = document.getElementById('pin-input');
+                input.classList.add('error');
+                document.getElementById('pin-error').style.display = 'block';
+                input.value = '';
+                setTimeout(() => input.classList.remove('error'), 500);
+            }
+        }
+
+        // تأكيد بالضغط على Enter
+        document.getElementById('pin-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') checkPin();
+            if (e.key === 'Escape') cancelPin();
+        });
+
+        // ===== سد ثغرات الخروج =====
+
+        // 1. منع زر الرجوع
+        history.pushState(null, '', location.href);
+        window.addEventListener('popstate', () => {
+            history.pushState(null, '', location.href);
+        });
+
+        // 2. منع إغلاق/مغادرة الصفحة
+        window.addEventListener('beforeunload', e => {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+
+        // 3. منع كليك يمين
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // 4. منع اختصارات لوحة المفاتيح
+        document.addEventListener('keydown', e => {
+            // منع F5, Ctrl+R, Ctrl+W, Ctrl+T, Alt+F4, Ctrl+F4
+            if (
+                e.key === 'F5' ||
+                (e.ctrlKey && ['r','R','w','W','t','T','n','N','l','L'].includes(e.key)) ||
+                (e.altKey && e.key === 'F4') ||
+                (e.ctrlKey && e.key === 'F4')
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // 5. تفعيل الـ fullscreen تلقائياً عند التحميل وإعادته إذا خرج
+        function enterFullscreen() {
+            const el = document.documentElement;
+            const req = el.requestFullscreen || el.mozRequestFullScreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+            if (req) req.call(el).catch(() => {});
+        }
+
+        // إعادة الـ fullscreen إذا خرج منه
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                setTimeout(enterFullscreen, 500);
+            }
+        });
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (!document.webkitFullscreenElement) {
+                setTimeout(enterFullscreen, 500);
+            }
+        });
+
+        // تفعيله عند أول لمس (المتصفح يشترط تفاعل المستخدم)
+        document.addEventListener('touchstart', function initFS() {
+            enterFullscreen();
+            document.removeEventListener('touchstart', initFS);
+        }, { once: true });
+
+        document.addEventListener('click', function initFSClick() {
+            enterFullscreen();
+            document.removeEventListener('click', initFSClick);
+        }, { once: true });
+
+        // 6. إظهار زر الإعدادات بلمس طويل في الزاوية السفلية اليسرى
+        let longPressTimer;
+        const settingsBtn = document.getElementById('settingsBtn');
+
+        document.addEventListener('touchstart', e => {
+            const touch = e.touches[0];
+            // الزاوية السفلية اليسرى (80×80 بكسل)
+            if (touch.clientX < 80 && touch.clientY > window.innerHeight - 80) {
+                longPressTimer = setTimeout(() => {
+                    settingsBtn.style.opacity = '1';
+                    setTimeout(() => { settingsBtn.style.opacity = '0'; }, 4000);
+                }, 1500);
+            }
+        });
+
+        document.addEventListener('touchend', () => clearTimeout(longPressTimer));
+
+        // ===== IndexedDB =====
+        const DB_NAME = 'GoldenBlankDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'menuItems';
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => reject(e.target.error);
+            });
+        }
+
+        function getAllItems(db) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).getAll();
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => reject(e.target.error);
+            });
+        }
+
+        function putAllItems(db, items) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                items.forEach(item => store.put(item));
+                tx.oncomplete = resolve;
+                tx.onerror = e => reject(e.target.error);
+            });
+        }
+
+        // ===== البيانات الافتراضية =====
+        const defaultItems = [
+            { id: 101, category: 'hot-drinks', name: 'V60', price: '12 SAR', image: '' },
+            { id: 102, category: 'hot-drinks', name: 'V60 محصول فاخر', price: '15 SAR', image: '' },
+            { id: 103, category: 'hot-drinks', name: 'اسبريسو', price: '10 SAR', image: '' },
+            { id: 104, category: 'hot-drinks', name: 'قهوة اليوم', price: '7 SAR', image: '' },
+            { id: 105, category: 'hot-drinks', name: 'أمريكانو', price: '11 SAR', image: '' },
+            { id: 106, category: 'hot-drinks', name: 'سبانيش لاتيه', price: '16 SAR', image: '' },
+            { id: 107, category: 'hot-drinks', name: 'فلات وايت', price: '14 SAR', image: '' },
+            { id: 108, category: 'hot-drinks', name: 'كورتادو', price: '13 SAR', image: '' },
+            { id: 109, category: 'hot-drinks', name: 'كابتشينو', price: '14 SAR', image: '' },
+            { id: 110, category: 'hot-drinks', name: 'قهوة تركية', price: '10 SAR', image: '' },
+            { id: 111, category: 'hot-drinks', name: 'قهوة سعوديه كوب', price: '8 SAR', image: '' },
+            { id: 112, category: 'hot-drinks', name: 'قهوة سعودية دله', price: '25 SAR', image: '' },
+            { id: 201, category: 'cold-drinks', name: 'V60', price: '14 SAR', image: '' },
+            { id: 202, category: 'cold-drinks', name: 'V60 محصول فاخر', price: '16 SAR', image: '' },
+            { id: 203, category: 'cold-drinks', name: 'قهوة اليوم', price: '8 SAR', image: '' },
+            { id: 204, category: 'cold-drinks', name: 'أمريكانو', price: '12 SAR', image: '' },
+            { id: 205, category: 'cold-drinks', name: 'ايس سبانيش لاتيه', price: '16 SAR', image: '' },
+            { id: 206, category: 'cold-drinks', name: 'ايس لاتيه', price: '15 SAR', image: '' },
+            { id: 207, category: 'cold-drinks', name: 'الفريدو', price: '13 SAR', image: '' },
+            { id: 208, category: 'cold-drinks', name: 'موهيتو', price: '16 SAR', image: '' },
+            { id: 209, category: 'cold-drinks', name: 'كركديه', price: '14 SAR', image: '' },
+            { id: 210, category: 'cold-drinks', name: 'ماتشا', price: '15 SAR', image: '' },
+            { id: 301, category: 'sweets', name: 'كيك عسل', price: '22 SAR', image: '' },
+            { id: 302, category: 'sweets', name: 'كيك تمر', price: '19 SAR', image: '' },
+            { id: 303, category: 'sweets', name: 'حلا البيكان', price: '18 SAR', image: '' },
+            { id: 304, category: 'sweets', name: 'تشيز مدريد', price: '22 SAR', image: '' },
+            { id: 305, category: 'sweets', name: 'لافا شوكلت', price: '18 SAR', image: '' },
+            { id: 306, category: 'sweets', name: 'لافا بستاشيو', price: '18 SAR', image: '' },
+            { id: 307, category: 'sweets', name: 'بودينق شوكلت', price: '16 SAR', image: '' },
+            { id: 401, category: 'sweets', name: 'ماء', price: '1 SAR', image: '' },
+            { id: 402, category: 'sweets', name: 'اضافة شت اسبريسو', price: '10 SAR', image: '' }
+        ];
+
+        const categoriesData = [
+            { id: 'hot-drinks', title: 'المشروبات الساخنة', desc: 'مذاق القهوة المختصة الأصيل' },
+            { id: 'cold-drinks', title: 'المشروبات الباردة', desc: 'انتعاش الصيف' },
+            { id: 'sweets', title: 'الحلويات', desc: 'لمسة السعادة في يومك' }
+        ];
+
+        // ===== بناء المنيو =====
+        function buildMenu(menuItems) {
+            const magazineContainer = document.getElementById('magazineContainer');
+            while (magazineContainer.children.length > 1) {
+                magazineContainer.removeChild(magazineContainer.lastChild);
+            }
+
+            categoriesData.forEach(cat => {
+                const itemsInCategory = menuItems.filter(item => item.category === cat.id);
+                if (itemsInCategory.length > 0) {
+                    magazineContainer.insertAdjacentHTML('beforeend', `
+                        <section class="page section-divider section-anchor" id="${cat.id}">
+                            <div class="page-content">
+                                <h2 class="section-title">${cat.title}</h2>
+                                <p class="section-desc">${cat.desc}</p>
+                            </div>
+                        </section>
+                    `);
+
+                    itemsInCategory.forEach(item => {
+                        const imageHtml = item.image
+                            ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;">`
+                            : `<div class="image-placeholder">${item.name}</div>`;
+
+                        magazineContainer.insertAdjacentHTML('beforeend', `
+                            <section class="page">
+                                <div class="item-layout">
+                                    <div class="item-image">${imageHtml}</div>
+                                    <div class="item-info">
+                                        <h2 class="item-name">${item.name}</h2>
+                                        <p class="item-price">${item.price}</p>
+                                    </div>
+                                </div>
+                            </section>
+                        `);
+                    });
+                }
+            });
+
+            setupScrollListener();
+        }
+
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+        }
+
+        function setupScrollListener() {
+            const sections = document.querySelectorAll('.section-anchor');
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const magazine = document.getElementById('magazineContainer');
+
+            magazine.addEventListener('scroll', () => {
+                let currentSection = 'cover';
+                sections.forEach(section => {
+                    const rect = section.getBoundingClientRect();
+                    if (rect.left <= window.innerWidth / 2 && rect.right >= window.innerWidth / 2) {
+                        currentSection = section.id;
+                    }
+                });
+                navButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-target') === currentSection) btn.classList.add('active');
+                });
+            });
+        }
+
+        // ===== مؤقت العودة للغلاف =====
+        let idleTimer;
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => scrollToSection('cover'), 2 * 60 * 1000);
+        }
+        ['mousemove','mousedown','touchstart','touchmove'].forEach(e =>
+            window.addEventListener(e, resetIdleTimer)
+        );
+        document.getElementById('magazineContainer').addEventListener('scroll', resetIdleTimer);
+        resetIdleTimer();
+
+        // ===== تحديث تلقائي كل 30 ثانية =====
+        async function refreshMenu() {
+            const db = await openDB();
+            const items = await getAllItems(db);
+            if (items && items.length > 0) buildMenu(items);
+        }
+        setInterval(refreshMenu, 30000);
+
+        // ===== تشغيل =====
+        (async () => {
+            const db = await openDB();
+            let items = await getAllItems(db);
+            if (!items || items.length < 20) {
+                await putAllItems(db, defaultItems);
+                items = defaultItems;
+            }
+            buildMenu(items);
+        })();
+    </script>
+</body>
+</html>
