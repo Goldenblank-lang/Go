@@ -15,6 +15,7 @@
             --danger: #dc3545;
             --white: #ffffff;
             --border: #ddd;
+            --success: #28a745;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
@@ -39,6 +40,8 @@
             margin-bottom: 20px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .btn {
@@ -55,6 +58,96 @@
         .btn-primary:hover { background: var(--primary-hover); }
         .btn-danger { background: var(--danger); color: var(--white); padding: 6px 12px; font-size: 0.9rem; }
 
+        /* ===== بطاقة إعداد الأسعار ===== */
+        .price-toggle-card {
+            background: linear-gradient(135deg, #fffbef 0%, #fff8e1 100%);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .price-toggle-info h3 {
+            font-size: 1.1rem;
+            color: #3A2E1E;
+            margin-bottom: 4px;
+        }
+
+        .price-toggle-info p {
+            font-size: 0.9rem;
+            color: #8C7B5E;
+        }
+
+        /* مفتاح التبديل */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-color);
+            min-width: 80px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 64px;
+            height: 34px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #ccc;
+            border-radius: 34px;
+            transition: 0.35s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.35s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--success);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(30px);
+        }
+
+        .toggle-status {
+            font-size: 0.95rem;
+            font-weight: 700;
+            min-width: 70px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-align: center;
+        }
+
+        .toggle-status.on { background: #d4edda; color: #155724; }
+        .toggle-status.off { background: #f8d7da; color: #721c24; }
+
+        /* ===== الجدول ===== */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
         .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
@@ -102,6 +195,38 @@
 <div class="container">
     <h1>لوحة تحكم المنيو — Golden Blank</h1>
 
+    <!-- ===== بطاقة إظهار/إخفاء الشريط العلوي ===== -->
+    <div class="price-toggle-card" style="margin-bottom:16px;">
+        <div class="price-toggle-info">
+            <h3>🔲 شريط التنقل العلوي</h3>
+            <p>إظهار أو إخفاء شريط "الحلويات" في أعلى المنيو</p>
+        </div>
+        <div class="toggle-wrapper">
+            <span class="toggle-label">الشريط:</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="navToggle" onchange="toggleNav(this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-status" id="navToggleStatus">...</span>
+        </div>
+    </div>
+
+    <!-- ===== بطاقة إظهار/إخفاء الأسعار ===== -->
+    <div class="price-toggle-card">
+        <div class="price-toggle-info">
+            <h3>💰 إظهار الأسعار في المنيو</h3>
+            <p>التحكم في ظهور الأسعار أمام الزبائن على شاشة المنيو</p>
+        </div>
+        <div class="toggle-wrapper">
+            <span class="toggle-label">الأسعار:</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="priceToggle" onchange="togglePrices(this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-status" id="toggleStatus">...</span>
+        </div>
+    </div>
+
     <div class="header-actions">
         <button class="btn btn-primary" onclick="openModal()">+ إضافة منتج جديد</button>
         <a href="./index.html" class="btn" style="background:#333;color:#fff;text-decoration:none;" target="_blank">مشاهدة المنيو 📱</a>
@@ -111,7 +236,6 @@
         <thead>
             <tr>
                 <th>الصورة</th>
-                <th>القسم</th>
                 <th>اسم المنتج</th>
                 <th>السعر</th>
                 <th>إجراءات</th>
@@ -138,23 +262,17 @@
             <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImage(event)">
         </div>
 
-        <div class="form-group">
-            <label>القسم</label>
-            <select id="itemCategory" class="form-control">
-                <option value="hot-drinks">المشروبات الساخنة</option>
-                <option value="cold-drinks">المشروبات الباردة</option>
-                <option value="sweets">الحلويات</option>
-            </select>
-        </div>
+        <!-- القسم ثابت: حلويات فقط -->
+        <input type="hidden" id="itemCategory" value="sweets">
 
         <div class="form-group">
             <label>اسم المنتج</label>
-            <input type="text" id="itemName" class="form-control" placeholder="مثال: ماتشا">
+            <input type="text" id="itemName" class="form-control" placeholder="مثال: كيك عسل">
         </div>
 
         <div class="form-group">
             <label>السعر (مع العملة)</label>
-            <input type="text" id="itemPrice" class="form-control" placeholder="مثال: 28 SAR">
+            <input type="text" id="itemPrice" class="form-control" placeholder="مثال: 22 SAR">
         </div>
 
         <button onclick="saveItem()" class="btn btn-primary" style="width:100%;margin-top:10px;">حفظ المنتج</button>
@@ -168,6 +286,7 @@
     const DB_NAME = 'GoldenBlankDB';
     const DB_VERSION = 1;
     const STORE_NAME = 'menuItems';
+    const SETTINGS_STORE = 'settings';
 
     function openDB() {
         return new Promise((resolve, reject) => {
@@ -176,6 +295,9 @@
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
                     db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+                    db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
                 }
             };
             req.onsuccess = e => resolve(e.target.result);
@@ -220,30 +342,28 @@
         });
     }
 
-    // ===== البيانات الافتراضية =====
+    function getSetting(db, key) {
+        return new Promise((resolve) => {
+            try {
+                const tx = db.transaction(SETTINGS_STORE, 'readonly');
+                const req = tx.objectStore(SETTINGS_STORE).get(key);
+                req.onsuccess = e => resolve(e.target.result ? e.target.result.value : null);
+                req.onerror = () => resolve(null);
+            } catch(e) { resolve(null); }
+        });
+    }
+
+    function saveSetting(db, key, value) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(SETTINGS_STORE, 'readwrite');
+            tx.objectStore(SETTINGS_STORE).put({ key, value });
+            tx.oncomplete = resolve;
+            tx.onerror = e => reject(e.target.error);
+        });
+    }
+
+    // ===== البيانات الافتراضية (حلويات فقط) =====
     const defaultItems = [
-        { id: 101, category: 'hot-drinks', name: 'V60', price: '12 SAR', image: '' },
-        { id: 102, category: 'hot-drinks', name: 'V60 محصول فاخر', price: '15 SAR', image: '' },
-        { id: 103, category: 'hot-drinks', name: 'اسبريسو', price: '10 SAR', image: '' },
-        { id: 104, category: 'hot-drinks', name: 'قهوة اليوم', price: '7 SAR', image: '' },
-        { id: 105, category: 'hot-drinks', name: 'أمريكانو', price: '11 SAR', image: '' },
-        { id: 106, category: 'hot-drinks', name: 'سبانيش لاتيه', price: '16 SAR', image: '' },
-        { id: 107, category: 'hot-drinks', name: 'فلات وايت', price: '14 SAR', image: '' },
-        { id: 108, category: 'hot-drinks', name: 'كورتادو', price: '13 SAR', image: '' },
-        { id: 109, category: 'hot-drinks', name: 'كابتشينو', price: '14 SAR', image: '' },
-        { id: 110, category: 'hot-drinks', name: 'قهوة تركية', price: '10 SAR', image: '' },
-        { id: 111, category: 'hot-drinks', name: 'قهوة سعوديه كوب', price: '8 SAR', image: '' },
-        { id: 112, category: 'hot-drinks', name: 'قهوة سعودية دله', price: '25 SAR', image: '' },
-        { id: 201, category: 'cold-drinks', name: 'V60', price: '14 SAR', image: '' },
-        { id: 202, category: 'cold-drinks', name: 'V60 محصول فاخر', price: '16 SAR', image: '' },
-        { id: 203, category: 'cold-drinks', name: 'قهوة اليوم', price: '8 SAR', image: '' },
-        { id: 204, category: 'cold-drinks', name: 'أمريكانو', price: '12 SAR', image: '' },
-        { id: 205, category: 'cold-drinks', name: 'ايس سبانيش لاتيه', price: '16 SAR', image: '' },
-        { id: 206, category: 'cold-drinks', name: 'ايس لاتيه', price: '15 SAR', image: '' },
-        { id: 207, category: 'cold-drinks', name: 'الفريدو', price: '13 SAR', image: '' },
-        { id: 208, category: 'cold-drinks', name: 'موهيتو', price: '16 SAR', image: '' },
-        { id: 209, category: 'cold-drinks', name: 'كركديه', price: '14 SAR', image: '' },
-        { id: 210, category: 'cold-drinks', name: 'ماتشا', price: '15 SAR', image: '' },
         { id: 301, category: 'sweets', name: 'كيك عسل', price: '22 SAR', image: '' },
         { id: 302, category: 'sweets', name: 'كيك تمر', price: '19 SAR', image: '' },
         { id: 303, category: 'sweets', name: 'حلا البيكان', price: '18 SAR', image: '' },
@@ -255,22 +375,57 @@
         { id: 402, category: 'sweets', name: 'اضافة شت اسبريسو', price: '10 SAR', image: '' }
     ];
 
-    const categoryNames = {
-        'hot-drinks': 'مشروبات ساخنة',
-        'cold-drinks': 'مشروبات باردة',
-        'sweets': 'حلويات'
-    };
-
     let db;
     let menuItems = [];
     let editingId = null;
     let currentImageBase64 = '';
 
-    // ===== عرض الجدول =====
+    // ===== تبديل إظهار/إخفاء الشريط العلوي =====
+    async function toggleNav(checked) {
+        await saveSetting(db, 'showNav', checked);
+        updateNavToggleUI(checked);
+        showToast(checked ? '✅ الشريط ظاهر الآن' : '🙈 الشريط مخفي الآن');
+    }
+
+    function updateNavToggleUI(show) {
+        const status = document.getElementById('navToggleStatus');
+        const toggle = document.getElementById('navToggle');
+        toggle.checked = show;
+        if (show) {
+            status.textContent = 'ظاهر';
+            status.className = 'toggle-status on';
+        } else {
+            status.textContent = 'مخفي';
+            status.className = 'toggle-status off';
+        }
+    }
+
+    // ===== تبديل إظهار/إخفاء الأسعار =====
+    async function togglePrices(checked) {
+        await saveSetting(db, 'showPrices', checked);
+        updateToggleUI(checked);
+        showToast(checked ? '✅ الأسعار ظاهرة الآن' : '🙈 الأسعار مخفية الآن');
+    }
+
+    function updateToggleUI(show) {
+        const status = document.getElementById('toggleStatus');
+        const toggle = document.getElementById('priceToggle');
+        toggle.checked = show;
+        if (show) {
+            status.textContent = 'ظاهرة';
+            status.className = 'toggle-status on';
+        } else {
+            status.textContent = 'مخفية';
+            status.className = 'toggle-status off';
+        }
+    }
+
+    // ===== عرض الجدول (حلويات فقط) =====
     function renderTable() {
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
-        menuItems.forEach(item => {
+        const sweetsItems = menuItems.filter(i => i.category === 'sweets');
+        sweetsItems.forEach(item => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>
@@ -278,7 +433,6 @@
                         ? `<img src="${item.image}" class="item-img">`
                         : `<div class="item-img" style="display:flex;justify-content:center;align-items:center;background:#eee;color:#888;font-size:12px;">بدون</div>`}
                 </td>
-                <td>${categoryNames[item.category] || item.category}</td>
                 <td>${item.name}</td>
                 <td>${item.price}</td>
                 <td>
@@ -295,7 +449,6 @@
         editingId = null;
         currentImageBase64 = '';
         document.getElementById('modalTitle').innerText = 'إضافة منتج';
-        document.getElementById('itemCategory').value = 'hot-drinks';
         document.getElementById('itemName').value = '';
         document.getElementById('itemPrice').value = '';
         document.getElementById('previewImg').style.display = 'none';
@@ -311,7 +464,6 @@
         editingId = id;
         currentImageBase64 = item.image || '';
         document.getElementById('modalTitle').innerText = 'تعديل منتج';
-        document.getElementById('itemCategory').value = item.category;
         document.getElementById('itemName').value = item.name;
         document.getElementById('itemPrice').value = item.price;
         if (item.image) {
@@ -332,13 +484,12 @@
     async function saveItem() {
         const name = document.getElementById('itemName').value.trim();
         const price = document.getElementById('itemPrice').value.trim();
-        const category = document.getElementById('itemCategory').value;
 
         if (!name || !price) { showToast('يرجى ملء جميع الحقول'); return; }
 
         const itemData = {
             id: editingId !== null ? editingId : Date.now(),
-            category,
+            category: 'sweets',
             name,
             price,
             image: currentImageBase64
@@ -400,7 +551,6 @@
         setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    // ===== إغلاق النافذة عند الضغط خارجها =====
     window.onclick = e => {
         if (e.target === document.getElementById('addModal')) closeModal();
     };
@@ -409,10 +559,30 @@
     (async () => {
         db = await openDB();
         menuItems = await getAllItems(db);
-        if (!menuItems || menuItems.length < 20) {
+
+        const sweetsOnly = menuItems ? menuItems.filter(i => i.category === 'sweets') : [];
+        if (!sweetsOnly || sweetsOnly.length === 0) {
             await putAllItems(db, defaultItems);
             menuItems = defaultItems;
         }
+
+        // تحميل إعداد الشريط العلوي
+        const showNav = await getSetting(db, 'showNav');
+        const navVisible = (showNav === null) ? true : (showNav === true || showNav === 'true');
+        updateNavToggleUI(navVisible);
+        if (showNav === null) {
+            await saveSetting(db, 'showNav', true);
+        }
+
+        // تحميل إعداد الأسعار
+        const showPrices = await getSetting(db, 'showPrices');
+        // الافتراضي: ظاهرة (true) إذا لم يُحدد بعد
+        const pricesVisible = (showPrices === null) ? true : (showPrices === true || showPrices === 'true');
+        updateToggleUI(pricesVisible);
+        if (showPrices === null) {
+            await saveSetting(db, 'showPrices', true);
+        }
+
         renderTable();
     })();
 </script>
